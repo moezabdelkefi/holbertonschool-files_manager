@@ -1,36 +1,36 @@
-const crypto = require('crypto');
-const dbClient = require('../utils/db');
+const sha1 = require('sha1');
+const User = require('../utils/db');
 
 const UsersController = {
-  postNew: async (req, res) => {
+  async postNew(req, res) {
     const { email, password } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Missing email' });
     }
+
     if (!password) {
       return res.status(400).json({ error: 'Missing password' });
     }
 
     try {
-      const usersCollection = dbClient.db.collection('users');
-      const existingUser = await usersCollection.findOne({ email });
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({ error: 'Email already exists' });
+        return res.status(400).json({ error: 'Already exist' });
       }
 
-      const hashedPassword = crypto.createHash('sha1').update(password).digest('hex');
+      const hashedPassword = sha1(password);
 
-      const newUser = {
+      const newUser = new User({
         email,
         password: hashedPassword,
-      };
+      });
 
-      const result = await usersCollection.insertOne(newUser);
+      await newUser.save();
 
-      return res.status(201).json({ email: result.ops[0].email, id: result.insertedId });
-    } catch (err) {
-      return res.status(500).json({ error: 'Server Error' });
+      return res.status(201).json({ id: newUser._id, email: newUser.email });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
   },
 };
