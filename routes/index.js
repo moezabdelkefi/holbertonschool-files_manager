@@ -4,7 +4,7 @@ const UsersController = require('../controllers/UsersController');
 
 const router = express.Router();
 
-router.get('/status', UsersController.getStatus);
+router.get('/status', AppController.getStatus);
 router.get('/stats', AppController.getStats);
 router.post('/users', UsersController.postNew);
 
