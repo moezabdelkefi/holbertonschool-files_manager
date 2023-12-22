@@ -23,17 +23,6 @@ class DBClient {
     return this.db !== null;
   }
 
-  async getUserByEmail(email) {
-    const usersCollection = this.db.collection('users');
-    return usersCollection.findOne({ email });
-  }
-
-  async createUser(user) {
-    const usersCollection = this.db.collection('users');
-    const result = await usersCollection.insertOne(user);
-    return result.ops[0];
-  }
-
   async nbUsers() {
     const usersCollection = this.db.collection('users');
     const count = await usersCollection.countDocuments();
