@@ -1,34 +1,68 @@
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 const DBClient = require('../utils/db');
 
 class FilesController {
-  static async putPublish(request, response) {
-    const fileId = request.params.id;
-    const userId = request.user.id; // Assuming user info is extracted from the token
+  static async postUpload(request, response) {
+    try {
+      const {
+        name,
+        type,
+        data,
+        parentId = 0,
+        isPublic = false,
+      } = request.body;
 
-    const file = await DBClient.getFile(fileId);
-    if (!file || file.userId !== userId) {
-      return response.status(404).json({ error: 'Not found' });
+      if (!name) {
+        return response.status(400).json({ error: 'Missing name' });
+      }
+
+      if (!type || !['folder', 'file', 'image'].includes(type)) {
+        return response.status(400).json({ error: 'Missing or invalid type' });
+      }
+
+      if ((type !== 'folder' && !data) || (data && typeof data !== 'string')) {
+        return response.status(400).json({ error: 'Missing or invalid data' });
+      }
+
+      // If parentId is set, validate it
+      if (parentId !== 0) {
+        const parentFile = await DBClient.db.collection('files').findOne({ _id: parentId });
+        if (!parentFile) {
+          return response.status(400).json({ error: 'Parent not found' });
+        }
+        if (parentFile.type !== 'folder') {
+          return response.status(400).json({ error: 'Parent is not a folder' });
+        }
+      }
+
+      let localPath = '';
+      if (type !== 'folder') {
+        const storingFolder = process.env.FOLDER_PATH || '/tmp/files_manager';
+        const fileId = uuidv4();
+        localPath = path.join(storingFolder, fileId);
+        fs.writeFileSync(localPath, Buffer.from(data, 'base64'));
+      }
+
+      // Add the new file document to the DB
+      const newFile = {
+        userId: request.user.id, // Assuming you've extracted user information from the token
+        name,
+        type,
+        isPublic,
+        parentId,
+        localPath: type !== 'folder' ? localPath : undefined,
+      };
+
+      const result = await DBClient.db.collection('files').insertOne(newFile);
+      const createdFile = { id: result.insertedId, ...newFile };
+
+      return response.status(201).json(createdFile);
+    } catch (error) {
+      console.error(error);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
-
-    file.isPublic = true;
-    await DBClient.updateFile(fileId, { isPublic: true });
-
-    return response.status(200).json(file);
-  }
-
-  static async putUnpublish(request, response) {
-    const fileId = request.params.id;
-    const userId = request.user.id; // Assuming user info is extracted from the token
-
-    const file = await DBClient.getFile(fileId);
-    if (!file || file.userId !== userId) {
-      return response.status(404).json({ error: 'Not found' });
-    }
-
-    file.isPublic = false;
-    await DBClient.updateFile(fileId, { isPublic: false });
-
-    return response.status(200).json(file);
   }
 }
 

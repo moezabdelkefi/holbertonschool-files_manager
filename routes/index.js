@@ -14,8 +14,7 @@ const router = (app) => {
   paths.post('/users', UsersController.postNew);
   paths.get('/connect', AuthController.getConnect);
   paths.get('/disconnect', AuthController.getDisconnect);
-  paths.put('/files/:id/publish', FilesController.putPublish);
-  paths.put('/files/:id/unpublish', FilesController.putUnpublish);
+  router.post('/files', FilesController.postUpload);
 };
 
 module.exports = router;
