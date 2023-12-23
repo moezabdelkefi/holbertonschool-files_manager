@@ -45,9 +45,8 @@ class FilesController {
         fs.writeFileSync(localPath, Buffer.from(data, 'base64'));
       }
 
-      // Add the new file document to the DB
       const newFile = {
-        userId: request.user.id, // Assuming you've extracted user information from the token
+        userId: request.user.id,
         name,
         type,
         isPublic,
