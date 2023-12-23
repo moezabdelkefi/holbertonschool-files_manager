@@ -8,10 +8,11 @@ const router = (app) => {
   app.use(express.json());
   app.use('/', paths);
 
-  router.get('/status', AppController.getStatus);
-  router.get('/stats', AppController.getStats);
-  router.post('/users', UsersController.postNew);
+  paths.get('/status', ((request, response) => AppController.getStatus(request, response)));
+  paths.get('/stats', ((request, response) => AppController.getStats(request, response)));
+  paths.post('/users', ((request, response) => UsersController.postNew(request, response)));
   paths.get('/connect', ((request, response) => AuthController.getConnect(request, response)));
   paths.get('/disconnect', ((request, response) => AuthController.getDisconnect(request, response)));
 };
+
 module.exports = router;
