@@ -1,8 +1,8 @@
-const sha1 = require('sha1');
-const User = require('../utils/db');
+const crypto = require('crypto');
+const dbClient = require('../utils/db');
 
-const UsersController = {
-  async postNew(req, res) {
+class UsersController {
+  static async postNew(req, res) {
     const { email, password } = req.body;
 
     if (!email) {
@@ -14,25 +14,31 @@ const UsersController = {
     }
 
     try {
-      const existingUser = await User.findOne({ email });
+      await dbClient.client.connect();
+
+      const usersCollection = dbClient.db.collection('users');
+      const existingUser = await usersCollection.findOne({ email });
+
       if (existingUser) {
         return res.status(400).json({ error: 'Already exist' });
       }
 
-      const hashedPassword = sha1(password);
+      const hashedPassword = crypto.createHash('sha1').update(password).digest('hex');
 
-      const newUser = new User({
+      const newUser = {
         email,
         password: hashedPassword,
-      });
+      };
 
-      await newUser.save();
+      const insertResult = await usersCollection.insertOne(newUser);
 
-      return res.status(201).json({ id: newUser._id, email: newUser.email });
+      const { _id, email: newUserEmail } = insertResult.ops[0];
+      return res.status(201).json({ id: _id, email: newUserEmail });
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Error creating user:', error);
+      return res.status(500).json({ error: 'Server error' });
     }
-  },
-};
+  }
+}
 
 module.exports = UsersController;
